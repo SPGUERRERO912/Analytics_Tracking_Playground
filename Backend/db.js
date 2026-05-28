@@ -1,4 +1,3 @@
-// db.js — sql.js SQLite (pure JS, no native compilation needed)
 // The DB is loaded from / saved to events.db on disk for persistence.
 const initSqlJs = require("sql.js");
 const fs = require("fs");
@@ -46,7 +45,7 @@ async function getDb() {
   return _db;
 }
 
-// Debounced disk save — sql.js keeps DB in memory; we flush to disk periodically
+// Debounced disk save — sql.js keeps DB in memory, so we need to save it periodically
 function scheduleSave() {
   if (_saveTimer) return;
   _saveTimer = setTimeout(() => {
@@ -62,7 +61,7 @@ function scheduleSave() {
   }, 5000);
 }
 
-// Helper: run a query that returns rows as plain objects
+// Run a query that returns rows as plain objects
 function query(db, sql, params = []) {
   const stmt = db.prepare(sql);
   stmt.bind(params);
@@ -72,7 +71,7 @@ function query(db, sql, params = []) {
   return rows;
 }
 
-// Helper: run a query that returns a single row
+// Run a query that returns a single row
 function queryOne(db, sql, params = []) {
   return query(db, sql, params)[0] || null;
 }
