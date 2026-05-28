@@ -7,7 +7,7 @@
  *   Analytics.track("click", { element: "hero-cta" });
  */
 (function (global) {
-  // Config 
+  // ── Config ────────────────────────────────────────────────────────────────
   const scriptTag = document.currentScript;
   const ENDPOINT =
     (scriptTag && scriptTag.dataset.endpoint) ||
@@ -17,7 +17,7 @@
   const BATCH_INTERVAL_MS = 2000; // flush every 2 s
   const SCROLL_THROTTLE_MS = 500;
 
-  // Session ID (persisted in sessionStorage) 
+  // ── Session ID (persisted in sessionStorage) ──────────────────────────────
   let sessionId = sessionStorage.getItem("atp_session");
   if (!sessionId) {
     sessionId =
@@ -28,31 +28,29 @@
     sessionStorage.setItem("atp_session", sessionId);
   }
 
-  // Event queue 
+  // ── Event queue ───────────────────────────────────────────────────────────
   let queue = [];
 
   function flush() {
     if (queue.length === 0) return;
     const batch = queue.splice(0);
     const body = JSON.stringify(batch);
-    // Use sendBeacon when available (works on page unload)
-    if (navigator.sendBeacon) {
-      const blob = new Blob([body], { type: "application/json" });
-      navigator.sendBeacon(ENDPOINT + "/track", blob);
-    } else {
-      fetch(ENDPOINT + "/track", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body,
-        keepalive: true,
-      }).catch(() => {});
-    }
+    // keepalive: true handles page-unload the same way sendBeacon would,
+    // but lets us control credentials. sendBeacon forces credentials:"include"
+    // which breaks CORS with wildcard origins.
+    fetch(ENDPOINT + "/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+      keepalive: true,
+      credentials: "omit",
+    }).catch(() => {});
   }
 
   setInterval(flush, BATCH_INTERVAL_MS);
   window.addEventListener("beforeunload", flush);
 
-  // Core track function 
+  // ── Core track function ───────────────────────────────────────────────────
   function track(eventType, metadata = {}) {
     queue.push({
       session_id: sessionId,
@@ -66,7 +64,7 @@
     });
   }
 
-  // Auto-tracking
+  // ── Auto-tracking ─────────────────────────────────────────────────────────
 
   // 1. Page view
   track("page_view", { title: document.title });
@@ -124,6 +122,6 @@
     track("time_on_page", { seconds: timeOnPage });
   }, 30_000);
 
-  // Public API 
+  // ── Public API ────────────────────────────────────────────────────────────
   global.Analytics = { track, flush, sessionId };
 })(window);

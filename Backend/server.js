@@ -6,10 +6,10 @@ const { getDb, query, queryOne, scheduleSave } = require("./db");
 const app  = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors({ origin: "*" }));
+app.use(cors({ origin: true, credentials: false }));
 app.use(express.json());
 
-// POST /track — ingest one or many events 
+// ── POST /track — ingest one or many events ───────────────────────────────────
 app.post("/track", async (req, res) => {
   const db     = await getDb();
   const events = Array.isArray(req.body) ? req.body : [req.body];
@@ -42,7 +42,7 @@ app.post("/track", async (req, res) => {
   res.json({ ok: true, received: events.length });
 });
 
-// GET /analytics — dashboard metrics 
+// ── GET /analytics — dashboard metrics ───────────────────────────────────────
 app.get("/analytics", async (req, res) => {
   const db    = await getDb();
   const since = parseInt(req.query.since ?? 0, 10);
@@ -68,7 +68,7 @@ app.get("/analytics", async (req, res) => {
   });
 });
 
-// DELETE /analytics/reset 
+// ── DELETE /analytics/reset ───────────────────────────────────────────────────
 app.delete("/analytics/reset", async (_req, res) => {
   const db = await getDb();
   db.run("DELETE FROM events");
@@ -77,10 +77,10 @@ app.delete("/analytics/reset", async (_req, res) => {
   res.json({ ok: true, message: "All data cleared." });
 });
 
-// Health check 
+// ── Health check ──────────────────────────────────────────────────────────────
 app.get("/health", (_req, res) => res.json({ status: "ok", ts: Date.now() }));
 
-// Boot 
+// ── Boot ──────────────────────────────────────────────────────────────────────
 getDb().then(() => {
   app.listen(PORT, () => console.log(`🚀  Analytics API → http://localhost:${PORT}`));
 }).catch(err => {

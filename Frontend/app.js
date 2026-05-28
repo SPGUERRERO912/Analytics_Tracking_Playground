@@ -143,14 +143,14 @@ async function resetData() {
   refreshDashboard();
 }
 
-// Live session counter
 let sessionCount = 1;
 
 function bumpSessionCount() {
-  sessionCount++;
-
+  
   document.getElementById("live-event-count").textContent =
     sessionCount;
+
+    sessionCount++;
 }
 
 // Toast helper
@@ -188,21 +188,18 @@ window.addEventListener("scroll", () => {
     )
   );
 
-  document.getElementById("scroll-bar").style.width = pct + "%";
+  // null guards — these elements are optional
+  const scrollBar = document.getElementById("scroll-bar");
+  const scrollPct = document.getElementById("scroll-pct");
 
-  document.getElementById("scroll-pct").textContent = pct + "%";
+  if (scrollBar) scrollBar.style.width = pct + "%";
+  if (scrollPct) scrollPct.textContent = pct + "%";
 
   document.querySelectorAll("[data-milestone]").forEach(el => {
     const m = parseInt(el.dataset.milestone);
-
     if (pct >= m) {
       el.classList.remove("border-border", "text-muted");
-
-      el.classList.add(
-        "border-brand",
-        "text-brand-light",
-        "bg-brand/10"
-      );
+      el.classList.add("border-brand", "text-brand-light", "bg-brand/10");
     }
   });
 });
