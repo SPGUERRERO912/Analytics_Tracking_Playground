@@ -106,25 +106,14 @@ function handleSignup(e) {
 
   const form = e.target;
   const plan = form.plan.value;
-
-  Analytics.track("form_submit", {
-    element: "signup-form",
-    plan
-  });
-
-  Analytics.flush();
-
-  toast("🎉 Conversion tracked! Check the dashboard.", "green");
-
+  Analytics.flush(); 
   form.reset();
 
-  bumpSessionCount();
-
   setTimeout(() => {
-    document
-      .getElementById("dashboard")
-      .scrollIntoView({ behavior: "smooth" });
+    document.getElementById("dashboard").scrollIntoView({ behavior: "smooth" });
   }, 600);
+
+  toast("🎉 Conversion tracked! Check the dashboard.", "green");
 }
 
 async function resetData() {
