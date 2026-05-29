@@ -1,18 +1,21 @@
 # ⬡ Analytics Tracking Playground
 
-A self-contained demo showing real-time analytics tracking: user interactions on the
-frontend are captured, sent to a Node.js backend, persisted in SQLite, and displayed
-on a live dashboard — all in one repo.
+A from-scratch event tracking pipeline — browser to database — built to practice and showcase full-stack fundamentals in a real, working context.
+
+🔗 **Live demo:** [analytics-tracking-playground-1.onrender.com](https://analytics-tracking-playground-1.onrender.com/)
 
 ```
 Analytics_Tracking_Playground/
 ├── Backend/
 │   ├── server.js          # Express API  (POST /track, GET /analytics)
-│   ├── db.js              # SQLite setup via better-sqlite3
+│   ├── db.js              # SQLite setup via sql.js
 │   └── package.json
 └── Frontend/
     ├── index.html         # Playground page + dashboard
-    └── analytics.js       # Drop-in tracker library
+    ├── analytics.js       # Drop-in tracker library
+    ├── app.js             # UI logic and dashboard rendering
+    ├── config.js          # Backend endpoint config
+    └── build.sh           # Render build script (injects BACKEND_URL)
 ```
 
 ---
@@ -32,12 +35,12 @@ npm start          # → http://localhost:3001
 ### 2 — Open the frontend
 
 ```bash
-# From the project root, serve Frontend/ with any static server:
+# From the project root:
 npx serve Frontend
 # → http://localhost:3000
 ```
 
-Or just open `Frontend/index.html` directly in your browser.
+Or open `Frontend/index.html` directly in your browser.
 *(CORS is open so `file://` access works too.)*
 
 ---
@@ -93,31 +96,71 @@ Clears all events and sessions. Useful for demo resets.
 
 ---
 
-## Deploying a Public Demo
+## Frontend Config
 
-**Recommended stack (free tier):**
+The backend URL lives in `Frontend/config.js`:
 
-| Layer | Service |
+```js
+window.ANALYTICS_ENDPOINT = "BACKEND_URL";
+```
+
+**Locally** — edit the file directly:
+```js
+window.ANALYTICS_ENDPOINT = "http://localhost:3001";
+```
+
+**In production** — the value is injected at build time via the `BACKEND_URL`
+environment variable (see Deploying section below). Never hardcode a production
+URL in this file before committing.
+
+The script load order in `index.html` matters:
+
+```html
+<script src="config.js"></script>    <!-- 1. sets window.ANALYTICS_ENDPOINT -->
+<script src="analytics.js"></script> <!-- 2. reads the endpoint -->
+<script src="app.js"></script>       <!-- 3. uses the Analytics object -->
+```
+
+---
+
+## Deploying to Render (free tier)
+
+The project is split into two Render services: a **Web Service** for the backend
+and a **Static Site** for the frontend.
+
+### Backend — Web Service
+
+| Field | Value |
 |---|---|
-| Backend | [Render](https://render.com) · [Railway](https://railway.app) · [Fly.io](https://fly.io) |
-| Frontend | [Netlify](https://netlify.com) · [Vercel](https://vercel.com) · [GitHub Pages](https://pages.github.com) |
+| Root directory | `Backend` |
+| Build command | `npm install` |
+| Start command | `node server.js` |
 
-**Steps:**
+No environment variables required. `PORT` is injected automatically by Render.
 
-1. Deploy the `Backend/` folder to Render/Railway (set `NODE_ENV=production`).
-2. Note the public backend URL (e.g. `https://atp-backend.onrender.com`).
-3. In `Frontend/index.html`, update the one config line:
-   ```js
-   window.ANALYTICS_ENDPOINT = "https://atp-backend.onrender.com";
-   ```
-4. Deploy the `Frontend/` folder to Netlify or GitHub Pages.
-5. Share the frontend URL. Done! 🎉
+### Frontend — Static Site
 
-> **SQLite persistence note:** Render/Railway give you a writable filesystem.
-> The `events.db` file persists between requests but resets on redeploy.
-> For permanent storage, swap `better-sqlite3` for a free [Turso](https://turso.tech)
-> remote SQLite or a [Supabase](https://supabase.com) PostgreSQL — the SQL queries
-> in `server.js` are standard and require no changes.
+`build.sh` runs before the site is served. It replaces the `BACKEND_URL`
+placeholder in `config.js` with the actual backend URL using `sed`:
+
+```bash
+#!/bin/bash
+sed -i "s|BACKEND_URL|${BACKEND_URL}|g" config.js
+```
+
+| Field | Value |
+|---|---|
+| Build command | `bash Frontend/build.sh` |
+| Publish directory | `Frontend` |
+| Environment variable | `BACKEND_URL` = `https://your-backend.onrender.com` |
+
+Set `BACKEND_URL` in Render's **Environment Variables** UI — no `.env` file needed.
+
+> **SQLite persistence note:** `events.db` persists between requests but resets
+> on redeploy. For permanent storage, swap `sql.js` for a free
+> [Turso](https://turso.tech) remote SQLite or a
+> [Supabase](https://supabase.com) PostgreSQL — the SQL in `server.js` is
+> standard and requires no changes.
 
 ---
 
@@ -126,8 +169,8 @@ Clears all events and sessions. Useful for demo resets.
 ```html
 <!-- Add to <head> of any page -->
 <script
-  src="https://your-frontend-url.com/analytics.js"
-  data-endpoint="https://your-backend-url.com">
+  src="https://analytics-tracking-playground-1.onrender.com/analytics.js"
+  data-endpoint="https://your-backend.onrender.com">
 </script>
 
 <!-- Manual event tracking -->
@@ -141,6 +184,6 @@ Clears all events and sessions. Useful for demo resets.
 ## Tech Stack
 
 - **Frontend** — HTML, Tailwind CSS (CDN), Vanilla JS
-- **Tracker** — `analytics.js` (batched, uses `sendBeacon` on unload)
-- **Backend** — Node.js, Express, `better-sqlite3`
-- **Storage** — SQLite (`events.db` file, zero config)
+- **Tracker** — `analytics.js` (batched, flushed via `fetch` with `keepalive`)
+- **Backend** — Node.js, Express
+- **Storage** — SQLite via `sql.js` (pure JS, zero native dependencies)
